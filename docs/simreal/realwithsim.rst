@@ -21,10 +21,10 @@ software infrastructure needs to be installed and compiled
 (as detailed in the installation instructions),
 and that one is not able to use simulation-specific functions.
 
-It is also possible to use this simulation through our software for interfacing with the
-real robot. So, you could
-access the real TriFinger with the simulation as seen in :doc:`simwithreal`.
-You can also access the simulated TriFinger through the real interface, as seen here below.
+.. It is also possible to use this simulation through our software for interfacing with the
+.. real robot. So, you could
+.. access the real TriFinger with the simulation as seen in :doc:`simwithreal`.
+.. You can also access the simulated TriFinger through the real interface, as seen here below.
 
 
 Creating a Simulation Backend

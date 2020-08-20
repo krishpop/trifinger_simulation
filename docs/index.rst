@@ -47,7 +47,7 @@ The main components of this package are:
    real TriFinger platform. For more details on this, please refer to :doc:`../api/trifingerplatform` (API doc),
    and the docs in :ref:`sim-real`.
 
-4. A gym-wrapper with two basic environments: for reaching ("TriFingerReach-v0"), and for pushing ("TriFingerPush-v0"),
+3. A gym-wrapper with two basic environments: for reaching ("TriFingerReach-v0"), and for pushing ("TriFingerPush-v0"),
    and an environment that you can use to perform tasks of varying
    difficulty levels involving manipulation of a cubical object ("TriFingerCubeDifficulty{}-v1"), where the difficulty values could be one of {1, 2, 3, 4}. This environment is from
    the `Real Robot Challenge <https://real-robot-challenge.com/>`_ . For more details on this, please refer `here <https://people.tuebingen.mpg.de/felixwidmaier/realrobotchallenge/simulation_phase/tasks.html>`_.
