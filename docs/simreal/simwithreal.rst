@@ -1,5 +1,5 @@
 **********************************************************************************
-Switching between the Real Robot and the Simulated Robot in trifinger_simulation
+Switching between the Real Robot and Simulation
 **********************************************************************************
 
 We have designed the entire `trifinger_simulation` package with the

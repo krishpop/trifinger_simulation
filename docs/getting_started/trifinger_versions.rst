@@ -1,10 +1,7 @@
 ************************************
-Different TriFinger Versions
+TriFinger Versions
 ************************************
 
-
-Different TriFinger Versions
-===============================
 You will most likely only need the TriFingerEdu (:numref:`edu`) version, which
 is open-source and described in the `paper <https://arxiv.org/abs/2008.03596>`_.
 

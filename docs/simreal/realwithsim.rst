@@ -1,29 +1,35 @@
 ********************************************************************************
-Switching between the Real Robot and the Simulated Robot in the Real Robot API
+Operation through Real Robot Interface
 ********************************************************************************
+
+Instead of directly using the Python interface, as described :doc:`here <./simvsreal>`,
+there is another mode of operation, which is closer to the real robot: 
+We can use the whole software infrastructure used for the real robot,
+but instead of running the real-robot backend, we replace
+it with a simulation backend (see the 
+`project site <https://sites.google.com/view/trifinger>`_ 
+and links therein to learn about the software infrastructure
+of the real robot).
+This means that in both cases the same frontend will be used,
+hence one can take code written for the real robot (e.g. 
+`this demo <https://github.com/open-dynamic-robot-initiative/robot_fingers/blob/master/demos/demo_trifingeredu.py>`_) 
+and simply replace the real robot backend with the simulation 
+backend or vice versa.
+
+The disadvantage of this mode of operation is that the entire
+software infrastructure needs to be installed and compiled
+(as detailed in the installation instructions),
+and that one is not able to use simulation-specific functions.
 
 It is also possible to use this simulation through our software for interfacing with the
 real robot. So, you could
 access the real TriFinger with the simulation as seen in :doc:`simwithreal`.
 You can also access the simulated TriFinger through the real interface, as seen here below.
 
-The Real Robot API
-======================
 
-The `robot_interfaces`_ sotware package provides an interface to the hardware of the real
-TriFinger robots. You can also find the documentation of this API `here <https://open-dynamic-robot-initiative.github.io/code_documentation/robot_interfaces/docs/doxygen/html/index.html>`_.
-
-.. _`robot_interfaces with Simulation`:
-
-Using the Simulation through the `robot_interfaces`_ API
+Creating a Simulation Backend
 ===========================================================
 
-It is possible to create a backend of this simulation and have access to all the methods
-provided by `robot_interfaces`_ in addition to all the methods provided by ``SimFinger``.
-This is done by using the pyBullet
-driver in the backend.  By doing this, you only need to replace the backend of the robot
-when switching between simulation and real, while all the rest of your code can
-remain **exactly** the same.
 
 
 To create a TriFinger backend using simulation:
