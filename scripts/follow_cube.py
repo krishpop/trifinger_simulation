@@ -57,9 +57,6 @@ def real():
     args = argparser.parse_args()
 
     robot = robot_fingers.Robot.create_by_name("trifingerpro")
-    if args.log:
-        logger = robot_interfaces.trifinger.Logger(robot.robot_data, 100)
-        logger.start(args.log)
 
     robot_properties_path = rospkg.RosPack().get_path("robot_properties_fingers")
     urdf_file = trifinger_simulation.finger_types_data.get_finger_urdf("trifingerpro")
@@ -83,9 +80,8 @@ def real():
 
     # ArUco stuff
     marker_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_16h5)
-    marker_length = 0.04
-    marker_id = 0
-    # FIXME
+    marker_length = 0.03
+    marker_id = 10
 
     def to_matrix(data: dict, key: str) -> np.ndarray:
         return np.array(data[key]["data"]).reshape(data[key]["rows"], data[key]["cols"])
@@ -117,9 +113,10 @@ def real():
 
         marker_corners, ids, _ = cv2.aruco.detectMarkers(img60, marker_dict)
         try:
-            i = ids.index(marker_id)
-        except ValueError:
+            i = np.where(ids == marker_id)[0][0]
+        except Exception:
             # marker not detected
+            #print("found", ids)
             time.sleep(0.1)
             continue
 
@@ -134,15 +131,16 @@ def real():
 
         print("Marker position:", world_marker_position)
 
-        continue
-
         # set goal a bit above the marker
-        goal = world_marker_position
-        goal[2] += 0.03
+        goal = world_marker_position[:3]
+        goal[2] += 0.06
 
-        joint_pos, err = kinematics.inverse_kinematics_one_finger(0, goal, obs.position)
+        new_joint_pos, err = kinematics.inverse_kinematics_one_finger(
+            0, goal, obs.position, tolerance=0.002, max_iterations=3000)
+
         # keep the other two fingers up
-        joint_pos[3:] = init_pos[3:]
+        alpha = 0.1
+        joint_pos[:3] = alpha * new_joint_pos[:3] + (1 - alpha) * joint_pos[:3]
 
 
 if __name__ == "__main__":
