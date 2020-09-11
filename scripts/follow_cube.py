@@ -146,4 +146,4 @@ def real():
 
 
 if __name__ == "__main__":
-    sim()
+    real()
