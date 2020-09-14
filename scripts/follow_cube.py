@@ -51,9 +51,53 @@ def sim():
         joint_pos[3:] = init_pos[3:]
 
 
+def to_matrix(data: dict, key: str) -> np.ndarray:
+    return np.array(data[key]["data"]).reshape(data[key]["rows"], data[key]["cols"])
+
+
+class ArucoDetector:
+
+    def __init__(self, calibration_file):
+        # ArUco stuff
+        self.marker_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_16h5)
+        self.marker_length = 0.04
+        self.marker_id = 0
+
+        with open(calibration_file, "r") as fh:
+            camera_calib = yaml.load(fh)
+
+        self.camera_matrix = to_matrix(camera_calib, "camera_matrix")
+        self.dist_coeffs = to_matrix(camera_calib, "distortion_coefficients")
+        self.trans_world_to_cam = to_matrix(camera_calib, "projection_matrix")
+        self.trans_cam_to_world = np.linalg.inv(self.trans_world_to_cam)
+
+    def detect_marker_pose(self, image):
+        marker_corners, ids, _ = cv2.aruco.detectMarkers(image, self.marker_dict)
+        try:
+            i = np.where(ids == self.marker_id)[0][0]
+        except Exception:
+            return None
+
+        rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(
+            marker_corners, self.marker_length, self.camera_matrix, self.dist_coeffs
+        )
+
+        # transform marker position from camera to world frame
+        cam_marker_position = np.ones(4)
+        cam_marker_position[:3] = tvecs[i]
+        world_marker_position = self.trans_cam_to_world @ cam_marker_position
+
+        return world_marker_position
+
+
 def real():
+    camera_names = ["camera60", "camera180", "camera300"]
+
     argparser = argparse.ArgumentParser(description=__doc__)
     argparser.add_argument("camera_calib60")
+    argparser.add_argument("camera_calib180")
+    argparser.add_argument("camera_calib300")
+    argparser.add_argument("--camera-name", "-c", choices=camera_names)
     args = argparser.parse_args()
 
     robot = robot_fingers.Robot.create_by_name("trifingerpro")
@@ -66,11 +110,14 @@ def real():
         ["finger_tip_link_0", "finger_tip_link_120", "finger_tip_link_240"],
     )
 
+    if args.camera_name:
+        camera_index = camera_names.index(args.camera_name)
+    else:
+        camera_index = None
+
     camera_data = trifinger_cameras.tricamera.SingleProcessData()
     camera_driver = trifinger_cameras.tricamera.TriCameraDriver(
-        "camera60",
-        "camera180",
-        "camera300",
+        *camera_names,
         downsample_images=False,
     )
     camera_backend = trifinger_cameras.tricamera.Backend(  # noqa
@@ -78,21 +125,11 @@ def real():
     )
     camera_frontend = trifinger_cameras.tricamera.Frontend(camera_data)
 
-    # ArUco stuff
-    marker_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_16h5)
-    marker_length = 0.04
-    marker_id = 0
-
-    def to_matrix(data: dict, key: str) -> np.ndarray:
-        return np.array(data[key]["data"]).reshape(data[key]["rows"], data[key]["cols"])
-
-    with open(args.camera_calib60, "r") as fh:
-        camera_calib = yaml.load(fh)
-
-    camera_matrix60 = to_matrix(camera_calib, "camera_matrix")
-    dist_coeffs60 = to_matrix(camera_calib, "distortion_coefficients")
-    trans_world_to_cam = to_matrix(camera_calib, "projection_matrix")
-    trans_cam_to_world = np.linalg.inv(trans_world_to_cam)
+    detectors = [
+        ArucoDetector(args.camera_calib60),
+        ArucoDetector(args.camera_calib180),
+        ArucoDetector(args.camera_calib300),
+    ]
 
     robot.initialize()
 
@@ -108,29 +145,33 @@ def real():
         i += 1
 
         finger_action = robot_interfaces.trifinger.Action(position=joint_pos)
+        finger_action.position_kp = [8] * 9
+        finger_action.position_kd = [0.01] * 9
         t = robot.frontend.append_desired_action(finger_action)
         obs = robot.frontend.get_observation(t)
 
         images = camera_frontend.get_latest_observation()
-        img60 = convert_image(images.cameras[0].image)
 
-        marker_corners, ids, _ = cv2.aruco.detectMarkers(img60, marker_dict)
-        try:
-            i = np.where(ids == marker_id)[0][0]
-        except Exception:
-            # marker not detected
-            #print("found", ids)
-            time.sleep(0.1)
-            continue
+        if camera_index is not None:
+            img = convert_image(images.cameras[camera_index].image)
+            world_marker_position = detectors[camera_index].detect_marker_pose(img)
 
-        rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(
-            marker_corners, marker_length, camera_matrix60, dist_coeffs60
-        )
+            if world_marker_position is None:
+                time.sleep(0.1)
+                continue
+        else:
+            positions = [
+                detector.detect_marker_pose(convert_image(camera.image))
+                for detector, camera in zip(detectors, images.cameras)
+            ]
+            # filter out Nones
+            positions = [p for p in positions if p is not None]
+            if not positions:
+                time.sleep(0.1)
+                continue
 
-        # transform marker position from camera to world frame
-        cam_marker_position = np.ones(4)
-        cam_marker_position[:3] = tvecs[i]
-        world_marker_position = trans_cam_to_world @ cam_marker_position
+            world_marker_position = np.mean(positions, axis=0)
+
 
         # set goal a bit above the marker
         goal = np.array(world_marker_position[:3], copy=True)
@@ -143,7 +184,7 @@ def real():
         alpha = 0.1
         joint_pos[:3] = alpha * new_joint_pos[:3] + (1 - alpha) * joint_pos[:3]
 
-        if i % 100 == 0:
+        if i % 500 == 0:
             tip_pos = kinematics.forward_kinematics(obs.position)
 
             print("-----------------------------------------------------")
