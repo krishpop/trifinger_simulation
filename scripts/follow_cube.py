@@ -80,8 +80,8 @@ def real():
 
     # ArUco stuff
     marker_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_16h5)
-    marker_length = 0.03
-    marker_id = 10
+    marker_length = 0.04
+    marker_id = 0
 
     def to_matrix(data: dict, key: str) -> np.ndarray:
         return np.array(data[key]["data"]).reshape(data[key]["rows"], data[key]["cols"])
@@ -103,7 +103,10 @@ def real():
         robot.frontend.append_desired_action(finger_action)
 
     joint_pos = init_pos
+    i = 0
     while True:
+        i += 1
+
         finger_action = robot_interfaces.trifinger.Action(position=joint_pos)
         t = robot.frontend.append_desired_action(finger_action)
         obs = robot.frontend.get_observation(t)
@@ -129,10 +132,8 @@ def real():
         cam_marker_position[:3] = tvecs[i]
         world_marker_position = trans_cam_to_world @ cam_marker_position
 
-        print("Marker position:", world_marker_position)
-
         # set goal a bit above the marker
-        goal = world_marker_position[:3]
+        goal = np.array(world_marker_position[:3], copy=True)
         goal[2] += 0.06
 
         new_joint_pos, err = kinematics.inverse_kinematics_one_finger(
@@ -141,6 +142,15 @@ def real():
         # keep the other two fingers up
         alpha = 0.1
         joint_pos[:3] = alpha * new_joint_pos[:3] + (1 - alpha) * joint_pos[:3]
+
+        if i % 100 == 0:
+            tip_pos = kinematics.forward_kinematics(obs.position)
+
+            print("-----------------------------------------------------")
+            print("Marker position:", np.round(world_marker_position[:3], 3))
+            print("Tip goal:", np.round(goal, 3))
+            print("Tip position:", np.round(tip_pos[0], 3))
+            print("IK error:", np.round(err, 3))
 
 
 if __name__ == "__main__":
