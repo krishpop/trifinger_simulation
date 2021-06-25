@@ -162,7 +162,7 @@ class TriFingerPlatform:
         self.cube = collision_objects.Cuboid(
             position=initial_object_pose.position,
             orientation=initial_object_pose.orientation,
-            half_extents=[0.01, 0.04, 0.01],
+            half_extents=move_cube._CUBOID_HALF_SIZE,
             mass=object_mass,
             pybullet_client_id=self.simfinger._pybullet_client_id,
         )
